@@ -2,7 +2,6 @@ import tensorflow as tf
 from dpu_utils.mlutils import Vocabulary
 import javalang
 from utils.java_processing import get_api_sequence, split_java_token, tokenize_java_code
-from da
 
 def create_vocabulary(all_ids, max_vocab_size):
     all_tokens = []
