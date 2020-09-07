@@ -1,12 +1,4 @@
-import re
-import os
 import pickle
-import datetime
-import numpy as np
-import tensorflow as tf
-
-import bert
-FullTokenizer = bert.bert_tokenization.FullTokenizer
 
 from utils.parameters import parse_args
 from models.reqver_model import Model
@@ -53,15 +45,6 @@ def train(args):
 
     train_hist = model.train(train_data, valid_data)
     return train_hist
-
-def create_tf_dataset(desc_input, sc_input, batch_size):
-    n_samples = len(desc_input[0])
-    td = tf.data.Dataset.from_tensor_slices(((*desc_input, *sc_input),
-                                                np.ones((n_samples,1))))\
-                        .shuffle(n_samples, reshuffle_each_iteration=True)\
-                        .batch(batch_size, drop_remainder=True)\
-                        .repeat()
-    return td
 
 if __name__ == "__main__":
     args = parse_args()

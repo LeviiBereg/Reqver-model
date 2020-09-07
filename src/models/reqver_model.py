@@ -5,7 +5,7 @@ import tensorflow as tf
 from models.api_encoder import ApiEncoder
 from models.cnn_encoder import CNNEncoder
 from models.bert_encoder import BertEncoder
-from utils.metrics import cos_loss, mrr
+from utils.metrics import cos_loss, mrr, frank, relevantat1, relevantat5, relevantat10
 
 class Model:
 
@@ -91,13 +91,6 @@ class Model:
         self.sc_encoder.model.compile(loss=cos_loss, optimizer=self.params.optimizer)
 
     def train(self, train_data, valid_data):
-        def create_tf_dataset(data, batch_size, n_samples):
-            td = tf.data.Dataset.from_tensor_slices((data, np.ones((n_samples,1)))) \
-                                .shuffle(n_samples, reshuffle_each_iteration=True) \
-                                .batch(batch_size, drop_remainder=True) \
-                                .repeat()
-            return td
-        
         callbacks = []
         if self.params.tb_callback:
             callbacks.append(self.get_tb_callback())
@@ -111,8 +104,14 @@ class Model:
 
         train_samples = len(train_data[0])
         valid_samples = len(valid_data[0])
-        train_data_ds = create_tf_dataset(train_data, self.params.batch_size, train_samples)
-        valid_data_ds = create_tf_dataset(valid_data, self.params.valid_batch_size, valid_samples)
+        train_data_ds = tf.data.Dataset.from_tensor_slices((train_data, np.ones((train_samples,1)))) \
+                                       .shuffle(train_samples, reshuffle_each_iteration=True)        \
+                                       .batch(self.params.batch_size, drop_remainder=True)           \
+                                       .repeat()
+        valid_data_ds = tf.data.Dataset.from_tensor_slices((valid_data, np.ones((valid_samples,1)))) \
+                                       .shuffle(valid_samples, reshuffle_each_iteration=True)        \
+                                       .batch(self.params.valid_batch_size, drop_remainder=True)     \
+                                       .repeat()
         train_steps_per_epoch = train_samples // self.params.batch_size
         valid_steps_per_epoch = valid_samples // self.params.valid_batch_size
 
@@ -138,5 +137,20 @@ class Model:
                                                          mode='max')
         return cp_callback
 
-    def evaluate(self):
-        pass
+    def evaluate(self, test_data):
+        if self.params.load_cp:
+            print("Load model weights from:", self.checkpoint_path)
+            self.model.load_weights(self.checkpoint_path)
+        self.model.compile(loss=cos_loss, 
+                           optimizer=self.params.optimizer, 
+                           metrics=[mrr, frank, relevantat1, relevantat5, relevantat10])
+
+        test_samples = len(test_data[0])
+        test_data_ds = tf.data.Dataset.from_tensor_slices((test_data, np.ones((test_samples,1)))) \
+                                       .shuffle(test_samples, reshuffle_each_iteration=True)      \
+                                       .batch(self.params.batch_size, drop_remainder=True)        \
+                                       .repeat()
+        test_steps_per_epoch = test_samples // self.params.batch_size
+
+        eval_res = self.model.evaluate(test_data_ds, steps=test_steps_per_epoch)
+        return eval_res

@@ -24,23 +24,20 @@ class BertEncoder:
         self.input_word_ids = tf.keras.layers.Input(shape=(self.max_seq_length,),
                                                     dtype=tf.int32,
                                                     name=f"{self.scope}_input_word_ids")
-        self.bert_layer = bert.BertModelLayer(**bert.BertModelLayer.Params(
-                                                    vocab_size               = 30522,        # embedding params
+        self.bert_layer = bert.BertModelLayer(bert.BertModelLayer.Params(
+                                                    vocab_size               = 30522,        
                                                     use_token_type           = False,
                                                     use_position_embeddings  = True,
-
-                                                    num_layers               = self.num_layers,           # transformer encoder params
+                                                    num_layers               = self.num_layers,    
                                                     hidden_size              = self.hidden_size,
                                                     num_heads                = self.att_heads,
                                                     hidden_dropout           = self.hidden_dropout,
                                                     intermediate_size        = self.att_heads * self.num_layers,
                                                     intermediate_activation  = "gelu",
-
-                                                    adapter_size             = None,         # see arXiv:1902.00751 (adapter-BERT)
-
-                                                    shared_layer             = False,        # True for ALBERT (arXiv:1909.11942)
+                                                    adapter_size             = None,         
+                                                    shared_layer             = False,        
                                                     embedding_size           = None))
-        self.bert_pooling = tf.keras.layers.Lambda(lambda x: tf.math.reduce_max(x, axis=1))# tf.keras.layers.Lambda(lambda seq: seq[:, 0, :])
+        self.bert_pooling = tf.keras.layers.Lambda(lambda x: tf.math.reduce_max(x, axis=1)) # tf.keras.layers.Lambda(lambda seq: seq[:, 0, :])
         self.bert_dropout = tf.keras.layers.Dropout(0.5)
         self.bert_dense = tf.keras.layers.Dense(self.output_units, activation='tanh', name=f"{self.scope}_dense")
 
