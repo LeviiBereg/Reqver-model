@@ -1,3 +1,5 @@
+import datetime
+import numpy as np
 import tensorflow as tf
 
 from models.api_encoder import ApiEncoder
@@ -14,6 +16,7 @@ class Model:
         self.sc_encoder = self._create_sc_encoder()
         self.model = self._make_graph()
         self._compile_models()
+        self.checkpoint_path = f"{self.params.data_path}/model_checkpoints/{self.params.model}/cp.ckpt"
         
 
     def _create_desc_encoder(self):
@@ -87,8 +90,53 @@ class Model:
         self.desc_encoder.model.compile(loss=cos_loss, optimizer=self.params.optimizer)
         self.sc_encoder.model.compile(loss=cos_loss, optimizer=self.params.optimizer)
 
-    def train(self):
-        pass
+    def train(self, train_data, valid_data):
+        def create_tf_dataset(data, batch_size, n_samples):
+            td = tf.data.Dataset.from_tensor_slices((data, np.ones((n_samples,1)))) \
+                                .shuffle(n_samples, reshuffle_each_iteration=True) \
+                                .batch(batch_size, drop_remainder=True) \
+                                .repeat()
+            return td
+        
+        callbacks = []
+        if self.params.tb_callback:
+            callbacks.append(self.get_tb_callback())
+        if self.params.cp_callback:
+            callbacks.append(self.get_cp_callback())
+        callbacks = callbacks if len(callbacks) > 0 else None
+
+        if self.params.load_cp:
+            print("Load model weights from:", self.checkpoint_path)
+            self.model.load_weights(self.checkpoint_path)
+
+        train_samples = len(train_data[0])
+        valid_samples = len(valid_data[0])
+        train_data_ds = create_tf_dataset(train_data, self.params.batch_size, train_samples)
+        valid_data_ds = create_tf_dataset(valid_data, self.params.valid_batch_size, valid_samples)
+        train_steps_per_epoch = train_samples // self.params.batch_size
+        valid_steps_per_epoch = valid_samples // self.params.valid_batch_size
+
+        train_hist = self.model.fit(train_data_ds,
+                                    epochs=self.params.epochs,
+                                    validation_data=valid_data_ds,
+                                    callbacks=callbacks,
+                                    steps_per_epoch=train_steps_per_epoch,
+                                    validation_steps=valid_steps_per_epoch)
+        return train_hist
+
+    def get_tb_callback(self):
+        current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        log_dir = f"{self.params.data_path}/logs/fit/{self.params.model}/" + current_time
+        tb_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
+        return tb_callback
+
+    def get_cp_callback(self):
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
+                                                         save_best_only=True,
+                                                         save_weights_only=True,
+                                                         monitor='val_mrr',
+                                                         mode='max')
+        return cp_callback
 
     def evaluate(self):
         pass

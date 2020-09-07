@@ -32,6 +32,9 @@ def parse_args():
     arg_parser.add_argument('--sc-bert-hidden-size', type=int, default=128, help='Hidden size of bert source code encoder')
     arg_parser.add_argument('--sc-bert-heads', type=int, default=4, help='Number of attention heads of bert source code encoder')
     arg_parser.add_argument('--generate-data', action='store_true', help='Preprocess new data and produce index files for inputs')
+    arg_parser.add_argument('--tb-callback', action='store_true', help='Use tensorboard callback to monitor training history')
+    arg_parser.add_argument('--cp-callback', action='store_true', help='Use checkpoints to save model weights each training epoch')
+    arg_parser.add_argument('--load-cp', action='store_true', help='Load existing checkpoint')
     arg_parser.add_argument('--output-units', type=int, default=400, help='Final size of source code and description sequence embeddings')
     arg_parser.add_argument('--similarity', type=str, default='cosine', help='Similarity metric')
     arg_parser.add_argument('--batch-size', type=int, default=256, help='Training batch size')
@@ -39,7 +42,6 @@ def parse_args():
     arg_parser.add_argument('--test-batch-size', type=int, default=256, help='Test batch size')
     arg_parser.add_argument('--epochs', type=int, default=25, help='Training epochs number')
     arg_parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer used for training')
-    arg_parser.add_argument('--checkpoint-path', type=str, default='', help='Path to existing model checkpoint')
     arg_parser.add_argument('--preprocessed-data-folder', type=str, default='preprocessed_data', help='Name of folder containine the preprocessed data')
 
     return arg_parser.parse_args()
