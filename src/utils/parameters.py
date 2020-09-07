@@ -1,0 +1,45 @@
+import argparse
+
+def parse_args():
+    """Return command line arguments as a dictionary."""
+
+    arg_parser = argparse.ArgumentParser(description='Software Requirements Verification Model')
+
+    # Input Arguments
+    arg_parser.add_argument('--model', type=str, default='', required=True, help='Type of source code encoder')
+    arg_parser.add_argument('--language', type=str, default='', help='Target programming language')
+    arg_parser.add_argument('--data-path', type=str, default='', required=True, help='Path to folder for storing preprocessed training and evaluation data')
+    arg_parser.add_argument('--data-folder', type=str, default='', required=True, help='Relative path inside of `data-path` to training data')
+    arg_parser.add_argument('--train-splits', type=int, default=-1, help='Number of splits of data to use for training')
+    arg_parser.add_argument('--valid-splits', type=int, default=-1, help='Number of splits of data to use for validation')
+    arg_parser.add_argument('--model-url', type=str, default='https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/2', help='URL of tensorflow-hub model of descriptions encoder')
+    arg_parser.add_argument('--desc-max-seq-len', type=int, default=180, help='Maximum length of input sequences of descriptions encoder')
+    arg_parser.add_argument('--desc-bert-layers', type=int, default=4, help='Number of layers in description encoder')
+    arg_parser.add_argument('--desc-bert-hidden-size', type=int, default=128, help='Hidden size of description encoder')
+    arg_parser.add_argument('--desc-bert-heads', type=int, default=4, help='Number of attention heads of description encoder')
+    arg_parser.add_argument('--sc-max-fname-len', type=int, default=5, help='Maximum length of input function names sequences of API encoder')
+    arg_parser.add_argument('--sc-max-api-len', type=int, default=125, help='Maximum length of input API calls sequences of API encoder')
+    arg_parser.add_argument('--sc-max-tok-len', type=int, default=150, help='Maximum length of input tokens sequences of API encoder')
+    arg_parser.add_argument('--sc-max-vocab', type=int, default=15000, help='Maximum size of tokens embedding vocabulary of source code encoder')
+    arg_parser.add_argument('--sc-vocab-file', type=str, default='', help='Name of vocabulary file in `data-path` folder for source code encoder')
+    arg_parser.add_argument('--sc-rnn-units', type=int, default=256, help='Hidden size of source code recurrent layers')
+    arg_parser.add_argument('--sc-emb-size', type=int, default=128, help='Size of token embeddings of source code encoder')
+    arg_parser.add_argument('--sc-add-conv', action='append', type=int, help='Add convolution kernel of desired size to n-gram encoder')
+    arg_parser.add_argument('--sc-conv-n-filters', type=int, default=100, help='Number of filters for convolutions of n-gram model')
+    arg_parser.add_argument('--sc-dropout-rate', type=int, default=0.25, help='Dropout rate applied between source code encoder layers')
+    arg_parser.add_argument('--sc-rnn-dropout-rate', type=int, default=0.2, help='Dropout rate of recurrent layers of source code encoder')
+    arg_parser.add_argument('--sc-bert-layers', type=int, default=4, help='Number of layers in bert source code encoder')
+    arg_parser.add_argument('--sc-bert-hidden-size', type=int, default=128, help='Hidden size of bert source code encoder')
+    arg_parser.add_argument('--sc-bert-heads', type=int, default=4, help='Number of attention heads of bert source code encoder')
+    arg_parser.add_argument('--generate-data', action='store_true', help='Preprocess new data and produce index files for inputs')
+    arg_parser.add_argument('--output-units', type=int, default=400, help='Final size of source code and description sequence embeddings')
+    arg_parser.add_argument('--similarity', type=str, default='cosine', help='Similarity metric')
+    arg_parser.add_argument('--batch-size', type=int, default=256, help='Training batch size')
+    arg_parser.add_argument('--valid-batch-size', type=int, default=256, help='Validation batch size')
+    arg_parser.add_argument('--test-batch-size', type=int, default=256, help='Test batch size')
+    arg_parser.add_argument('--epochs', type=int, default=25, help='Training epochs number')
+    arg_parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer used for training')
+    arg_parser.add_argument('--checkpoint-path', type=str, default='', help='Path to existing model checkpoint')
+    arg_parser.add_argument('--preprocessed-data-folder', type=str, default='preprocessed_data', help='Name of folder containine the preprocessed data')
+
+    return arg_parser.parse_args()

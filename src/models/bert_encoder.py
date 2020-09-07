@@ -3,12 +3,15 @@ import bert
 
 class BertEncoder:
 
-    def __init__(self, scope, max_seq_length, bert_params, output_units):
+    def __init__(self, scope, max_seq_length, num_layers, hidden_size, att_heads, hidden_dropout, output_units):
         self.model_name = "bert"
 
         self.scope = scope
         self.max_seq_length = max_seq_length
-        self.bert_params = bert_params
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+        self.att_heads = att_heads
+        self.hidden_dropout = hidden_dropout
         self.output_units = output_units
 
         self._init_layers()
@@ -21,7 +24,22 @@ class BertEncoder:
         self.input_word_ids = tf.keras.layers.Input(shape=(self.max_seq_length,),
                                                     dtype=tf.int32,
                                                     name=f"{self.scope}_input_word_ids")
-        self.bert_layer = bert.BertModelLayer(**self.bert_params)
+        self.bert_layer = bert.BertModelLayer(**bert.BertModelLayer.Params(
+                                                    vocab_size               = 30522,        # embedding params
+                                                    use_token_type           = False,
+                                                    use_position_embeddings  = True,
+
+                                                    num_layers               = self.num_layers,           # transformer encoder params
+                                                    hidden_size              = self.hidden_size,
+                                                    num_heads                = self.att_heads,
+                                                    hidden_dropout           = self.hidden_dropout,
+                                                    intermediate_size        = self.att_heads * self.num_layers,
+                                                    intermediate_activation  = "gelu",
+
+                                                    adapter_size             = None,         # see arXiv:1902.00751 (adapter-BERT)
+
+                                                    shared_layer             = False,        # True for ALBERT (arXiv:1909.11942)
+                                                    embedding_size           = None))
         self.bert_pooling = tf.keras.layers.Lambda(lambda x: tf.math.reduce_max(x, axis=1))# tf.keras.layers.Lambda(lambda seq: seq[:, 0, :])
         self.bert_dropout = tf.keras.layers.Dropout(0.5)
         self.bert_dense = tf.keras.layers.Dense(self.output_units, activation='tanh', name=f"{self.scope}_dense")
@@ -34,7 +52,7 @@ class BertEncoder:
         sc_sequence_output = self.bert_layer(self.input_word_ids)
         sc_pooled_output = self.bert_pooling(sc_sequence_output)
         sc_pooled_output = self.bert_dropout(sc_pooled_output)
-        self.inputs  = self.input_word_ids
+        self.inputs  = [self.input_word_ids]
         self.outputs = self.bert_dense(sc_pooled_output)
 
         sc_embedding_model = tf.keras.Model(inputs=self.inputs,

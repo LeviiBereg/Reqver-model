@@ -1,19 +1,76 @@
-from utils.java_processing import get_api_sequence, split_java_token, tokenize_java_code, check_and_fix_code_validity
-from data_processing.data_extractor import DataExtractor
 import re
+import h5py
 import string
-import tensorflow as tf
 import javalang
+import pandas as pd
+import tensorflow as tf
 from dpu_utils.mlutils import Vocabulary
+
+from utils.java_processing import get_api_sequence, split_java_token, tokenize_java_code, check_and_fix_code_validity
 
 
 class DataGenerator:
+    '''
+    Handler of reading and writing procedures for method-description pairs 
+        stored in prepared json lines
 
+    Attributes:
+        params (dict): configuration specifying model and data related variables
+        desc_tokenizer (object): tokenizer object for BERT descriptions encoder
+        sc_tokenizer (object): tokenizer object for BERT source code encoder
+    '''
     def __init__(self, params, desc_tokenizer=None, sc_tokenizer=None):
         self.params = params
-        self.data_extractor = DataExtractor(params.data_path, params.data_folder, params.use_cols, params.language, params.model_type, params.hdf5_data_folder)
         self.desc_tokenizer = desc_tokenizer
         self.sc_tokenizer = sc_tokenizer
+
+    def read_data(self, scope, n_splits):
+        '''
+        Read the method-description pairs of `scope` from `n_splits` json lines files
+
+        Args:
+            scope (string): scope of retrieved pairs from train, valid or test
+            n_splits (list): number of dataset splits to read
+        Returns:
+            train_df (dataframe): retrieved text pairs
+        '''
+        def get_file(scope, split_ind):
+            return pd.read_json(f"{self.params.data_path}/{self.params.data_folder}/{self.params.language}_{scope}_{split_ind}.jsonl", lines=True)[self.params.use_cols]
+
+        train_df = get_file(scope, split_ind=0)
+        for i in range(1, n_splits):
+            train_df = train_df.append(get_file(scope, split_ind=i), ignore_index=True)
+        return train_df
+
+    def write_hdf5_data(self, dataset, dataset_name):
+        '''
+        Writes the `dataset` to `dataset_name` folder
+
+        Args:
+            dataset (dataframe): the dataset to store
+            dataset_name (string): name of folder and dataset
+        Returns:
+            -
+        '''
+        with h5py.File(f'{self.params.data_path}/{self.params.preprocessed_data_folder}/{self.params.model}_encoder/{dataset_name}.h5', 'w') as hf:
+            hf.create_dataset(dataset_name, data=dataset)
+
+    def read_hdf5_data(self, dataset_name, start_index=0, end_index=-1):
+        '''
+        Reads the pairs from `dataset_name` starting at `start_index` until `end_index`
+
+        Args:
+            dataset_name (string): name of folder and dataset
+            start_index (int): the start index to read from
+            end_index (int): the last index to read up to
+        Returns:
+            Dataframe of retrieved pairs
+        '''
+        with h5py.File(f'{self.params.data_path}/{self.params.preprocessed_data_folder}/{self.params.model}_encoder/{dataset_name}.h5', "r") as f:
+            dataset = f[dataset_name]
+            end_index = end_index if end_index > 0 else dataset.size
+            res = dataset[start_index:end_index]
+        return res
 
     def create_vocabulary(self, all_ids, max_vocab_size):
         all_tokens = []
@@ -22,9 +79,9 @@ class DataGenerator:
                 all_tokens += lst
 
         vocab = Vocabulary.create_vocabulary(all_tokens,
-                                            max_size=max_vocab_size,
-                                            count_threshold=int(len(all_tokens[0]) * 0.00025),
-                                            add_pad=True)
+                                             max_size=max_vocab_size,
+                                             count_threshold=int(len(all_tokens[0]) * 0.00025),
+                                             add_pad=True)
         return vocab
 
     def cleaning(self, text):
@@ -37,7 +94,7 @@ class DataGenerator:
         # delete XML tags
         text = re.sub(r'<[\/a-zA-Z]+>', "", text)
         # remove excessive spaces
-        #     text = re.sub(r'\s+', " ", text)
+        # text = re.sub(r'\s+', " ", text)
 
         text = ''.join(character for character in text if character in string.printable)
         text = text.lower().strip()
@@ -90,7 +147,7 @@ class DataGenerator:
         return sc_vocab, [input_ids]
 
     def generate_inputs(self, scope='train', n_splits=1, use_vocab=None):
-        pddf = self.data_extractor.read_data(scope=scope, n_splits=n_splits)
+        pddf = self.read_data(scope=scope, n_splits=n_splits)
         valid_inds = check_and_fix_code_validity(pddf)
         pddf = pddf[valid_inds]
         pddf.docstring = pddf.docstring.apply(self.cleaning)
@@ -99,16 +156,16 @@ class DataGenerator:
 
         if self.params.model_type == 'ngram':
             sc_vocab, sc_input = self.generate_ngram_input(pddf.code,
-                                                self.params.sc_max_seq_length,
-                                                self.params.sc_max_vocab_size,
-                                                use_vocab=use_vocab)
+                                                           self.params.sc_max_seq_length,
+                                                           self.params.sc_max_vocab_size,
+                                                           use_vocab=use_vocab)
         elif self.params.model_type == 'api':
             sc_vocab, sc_input = self.generate_api_input(pddf.code,
-                                                    self.params.sc_max_fname_length,
-                                                    self.params.sc_max_api_length,
-                                                    self.params.sc_max_seq_length,
-                                                    self.params.sc_max_vocab_size,
-                                                    use_vocab=use_vocab)
+                                                         self.params.sc_max_fname_length,
+                                                         self.params.sc_max_api_length,
+                                                         self.params.sc_max_seq_length,
+                                                         self.params.sc_max_vocab_size,
+                                                         use_vocab=use_vocab)
         elif self.params.model_type == 'bert':
             sc_input = self.generate_bert_input(pddf.code, self.params.sc_max_seq_length, self.sc_tokenizer)
             sc_vocab = self.sc_tokenizer.vocab

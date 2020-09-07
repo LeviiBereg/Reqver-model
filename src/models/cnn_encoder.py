@@ -60,7 +60,7 @@ class CNNEncoder:
             conv_outputs.append(sc_conv_out)
         sc_output = tf.concat(conv_outputs, 2) # (batch_size, 1, n_convs * conv_n_filters)
         sc_output = self.sc_conv_flatten(sc_output) # (batch_size, n_convs * conv_n_filters)
-        self.inputs  = self.sc_input_tok_ids
+        self.inputs  = [self.sc_input_tok_ids]
         self.outputs = self.sc_dense(sc_output)
 
         sc_embedding_model = tf.keras.Model(inputs=self.inputs,

@@ -24,9 +24,6 @@ MODEL_TYPE = 'api'
 LANGUAGE = "java" #"python"
 DATA_PATH = "/home/vkarpov"
 DATA_FOLDER = f"{LANGUAGE}/short"
-TRAIN_FILE  = f"{LANGUAGE}_train_0.jsonl"
-TEST_FILE   = f"{LANGUAGE}_test_0.jsonl"
-VALID_FILE  = f"{LANGUAGE}_valid_0.jsonl"
 
 use_cols = ["code", "docstring"] # code_tokens
 
