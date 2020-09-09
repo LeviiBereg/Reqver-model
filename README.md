@@ -1,6 +1,6 @@
 # "Software product <--> Requirements specification" verification model
 
-The repository contains the model intended to solve the problem of automatic verification of accomplishment of software requirements. We employ the cosine similarity between latent representations of Java methods and functional requirements to estimate the measure of accomplishment. The repository contains full implementation of three source code encoders of different granularity, being the subject of research of Innopolis 2020 master thesis project, along with one natural language encoder.
+The repository contains the model intended to solve the problem of automatic verification of accomplishment of software requirements. We employ the cosine similarity between latent representations of Java methods and functional requirements to estimate the measure of accomplishment. The repository contains full implementation of three source code encoders of different granularity, being the subject of research of Innopolis 2020 master thesis project, along with one natural language encoder. Additional details on problem, related work, model structure and demo can be found in [presentation](https://github.com/LeviiBereg/reqsumm/blob/master/Thesis%20presentation.pdf).
 
 
 ## Requirements
